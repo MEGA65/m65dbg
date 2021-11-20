@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 #define _BSD_SOURCE _BSD_SOURCE
 #include <stdio.h>
 #include <string.h>

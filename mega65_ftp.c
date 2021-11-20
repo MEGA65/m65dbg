@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 /*
 
    Upload one or more files to SD card on MEGA65

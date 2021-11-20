@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 #include <stdbool.h>
 
 void listSearch(void);

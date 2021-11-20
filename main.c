@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 /**
  * m65dbg - An enhanced remote serial debugger/monitor for the mega65 project
  **/

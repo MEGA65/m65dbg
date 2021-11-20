@@ -1,3 +1,5 @@
+; vim: set expandtab shiftwidth=2 tabstop=2:
+
 ;  Little helper routine for speeding up mega65_ftp
 ;  Basically it checks if the sector data provided matches what is on the
 ;  SD-card at the correct address. If it matches, then it doesn't write anything.

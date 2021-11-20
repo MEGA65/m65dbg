@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 /*
    Load the specified program into memory on the C65GS via the serial monitor.
 

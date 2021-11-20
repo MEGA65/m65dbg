@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

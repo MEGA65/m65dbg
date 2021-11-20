@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 #include "gs4510.h"
 
 char* instruction_lut[] =

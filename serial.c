@@ -1,3 +1,5 @@
+/* vim: set expandtab shiftwidth=2 tabstop=2: */
+
 // serial code routine borrowed from:
 // http://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
 
