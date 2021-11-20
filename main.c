@@ -94,7 +94,7 @@ void parse_command(void)
     serialRead(inbuf, BUFSIZE);
     printf("%s", inbuf);
   }
-  
+
   if (strInput != NULL)
   {
     free(strInput);

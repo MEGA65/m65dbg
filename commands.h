@@ -94,7 +94,7 @@ extern char* type_names[];
 
 typedef struct we
 {
-  type_watch type; 
+  type_watch type;
   char* name;
   char* param1;
   struct we* next;
