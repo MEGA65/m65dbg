@@ -11,6 +11,7 @@ endif
 
 CC=gcc
 CFLAGS=-c -Wall -g -std=c99
+COPT=	-I/opt/homebrew/include -L/opt/homebrew/lib
 LDFLAGS+=-lpng
 SOURCES=main.c serial.c commands.c gs4510.c screen_shot.c m65.c mega65_ftp.c ftphelper.c
 OBJECTS=$(SOURCES:.c=.o)
@@ -19,10 +20,10 @@ EXECUTABLE=m65dbg
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(CC) $(COPT) $(OBJECTS) $(LDFLAGS) -o $@
 
 .c.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(COPT) $(CFLAGS) $< -o $@
 
 install: m65dbg
 	ln -s $(CURDIR)/m65dbg /usr/local/bin/m65dbg

@@ -28,6 +28,20 @@
 #include <arpa/inet.h>
 #include "serial.h"
 
+#ifdef __APPLE__
+#include <sys/ioctl.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/serial/IOSerialKeys.h>
+#include <IOKit/serial/ioss.h>
+#include <IOKit/IOBSD.h>
+
+static const int B1000000 = 1000000;
+static const int B1500000 = 1500000;
+static const int B2000000 = 2000000;
+static const int B4000000 = 4000000;
+#endif
+
 // borrow this from commands.c
 extern int peek(unsigned int address);
 
@@ -53,6 +67,16 @@ int set_interface_attribs (int fd, int speed, int parity)
     return -1;
   }
 
+#ifdef __APPLE__
+  speed_t speed_apple = speed;
+  fprintf(stderr,"Setting serial speed to %d bps using OSX method.\n",speed); 
+  if (ioctl(fd, IOSSIOSPEED, &speed_apple) == -1) {
+    perror("Failed to set output baud rate using IOSSIOSPEED");
+  }
+  if (tcgetattr(fd, &tty)) perror("Failed to get terminal parameters");
+  cfmakeraw(&tty);
+  if (tcsetattr(fd, TCSANOW, &tty)) perror("Failed to set OSX terminal parameters");
+#else
   cfsetospeed (&tty, speed);
   cfsetispeed (&tty, speed);
 
@@ -80,6 +104,8 @@ int set_interface_attribs (int fd, int speed, int parity)
     error_message ("error %d from tcsetattr\n", errno);
     return -1;
   }
+#endif
+
   return 0;
 }
 
@@ -204,12 +230,7 @@ bool serialOpen(char* portname)
           error_message ("error %d opening %s: %s\n", errno, portname, strerror (errno));
           return false;
     }
-#ifdef __APPLE__
-    // WARNING: This slower bps won't work with newer bitstreams
-    set_interface_attribs (fd, B230400, 0);  // set speed to slower 230,400 bps, 8n1 (no parity)
-#else
     set_interface_attribs (fd, B2000000, 0);  // set speed to 2,000,000 bps, 8n1 (no parity)
-#endif
     set_blocking_serial (fd, 0);  // set no blocking
     // borrowed this line from m65.c - set_serial_speed(), as it seems to set the
     // non-blocking behaviour properly

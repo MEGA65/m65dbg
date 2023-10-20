@@ -41,7 +41,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#ifndef __CYGWIN__
+#if !defined(__CYGWIN__) && !defined(__APPLE__)
 #include <dirent.h>
 #else
 #define NAME_MAX  260
@@ -66,7 +66,7 @@ struct dirent
 
 #define DT_FREESLOT 0xff
 
-#ifdef APPLE
+#ifdef __APPLE__
 static const int B1000000 = 1000000;
 static const int B1500000 = 1500000;
 static const int B2000000 = 2000000;
@@ -507,7 +507,7 @@ int do_ftp(char* bitstream)
   start_time=time(0);
   start_usec=gettime_us();
 
-#ifndef APPLE
+#ifndef __APPLE__
 #ifndef __CYGWIN__
   // And also another way
   struct serial_struct serial;
@@ -576,7 +576,7 @@ int do_ftp(char* bitstream)
 
   slow_write_ftp(fd,"\r!\r",3,0); usleep(100000);
   set_speed(fd,2000000);
-#ifndef __CYGWIN__
+#if !defined(__CYGWIN__) && !defined(__APPLE__)
   serial.flags -= ASYNC_LOW_LATENCY;
   ioctl(fd, TIOCSSERIAL, &serial);
 #endif

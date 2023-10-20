@@ -41,6 +41,7 @@ int serialport_write(HANDLE port, uint8_t * buffer, size_t size);
 #define PORT_TYPE int
 size_t serialport_read(int fd, uint8_t * buffer, size_t size);
 int serialport_write(int fd, uint8_t * buffer, size_t size);
+int start_cpu(void);
 #endif
 
 #ifdef WINDOWS
