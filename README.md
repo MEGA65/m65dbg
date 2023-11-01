@@ -17,7 +17,7 @@ The “m65dbg” tool is a command-line based enhanced remote serial debugger/mo
 
 Latest detailed documentation can be found here:
 
-* https://docs.google.com/document/d/1cEhHvvc1E47UgSoXvKPpwnf43l20sLPY-y-ZuQ4b\_ng/edit?usp=sharing
+* https://docs.google.com/document/d/1cEhHvvc1E47UgSoXvKPpwnf43l20sLPY-y-ZuQ4b_ng/edit
 
 # The raw monitor
 
@@ -25,8 +25,9 @@ The m65dbg app adds enhanced commands on-top of the existing commands provided b
 
 Documentation for this raw monitor exists for it in the following locations:
 
+* The MEGA65 Compendium: https://mega65.org/docs
 * C65GS System Notes
-  * https://docs.google.com/document/d/1fmEUg6hDdWRb2tFZ3n4LG7S1mNP04\_SUAW5DrE8zRpk/edit#
+  * https://docs.google.com/document/d/1fmEUg6hDdWRb2tFZ3n4LG7S1mNP04_SUAW5DrE8zRpk/edit#
   * See the “**4.3 Remote Serial Monitor (handy for debugging)**” section
 * https://github.com/Ben-401/c65gs/blob/dockit/doc/monitor.md
   * Some extra usage info exists in this page of Ben's fork of the github repo
