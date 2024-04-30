@@ -5,7 +5,17 @@
 #include <stdbool.h>
 
 #ifdef WINDOWS
-#define PORT_TYPE HANDLE
+#define WINPORT_TYPE_INVALID -1
+#define WINPORT_TYPE_FILE 0
+#define WINPORT_TYPE_SOCK 1
+typedef struct {
+  int type; // 0 = file, 1 = socket
+  HANDLE fdfile;
+  SOCKET fdsock;
+} WINPORT;
+
+#define PORT_TYPE WINPORT
+
 #else
 #define PORT_TYPE int
 #endif
