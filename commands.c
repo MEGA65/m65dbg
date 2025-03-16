@@ -6029,7 +6029,7 @@ void cmdMapping(void)
   }
   printf("\n");
 
-  printf("$D030 register (overrides $01)\n");
+  printf("$D030 register\n");
   printf("==============\n");
   if (reg_d030 & 0x08)
     printf("- $8000 <-- $2,8000 %s\n", get_rom_chunk_name(0, 0x28000));
@@ -6044,13 +6044,9 @@ void cmdMapping(void)
   printf("$01 register\n");
   printf("===========\n");
 
-  // 133 = 1000 0101
-
-  if (!(reg_01 & 0x03))
-    printf("- All RAM\n");
   if ((reg_01 & 0x03) == 0x03)
     printf("- $A000 <-- $2,A000 (C64 BASIC)\n");
-  if (reg_01 & 0x07)
+  if ((reg_01 & 0x04) && (reg_01 & 0x03))
     printf("- $D000 <-- I/O\n");
   else if (reg_01 & 0x03)
     printf("- $D000 <-- $2,D000 (C64 CHARSET)\n");
