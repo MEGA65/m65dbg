@@ -623,7 +623,7 @@ type_fileloc* add_to_list(type_fileloc fl)
 
     iter = iter->next;
   }
-  
+
   return NULL;
 }
 
@@ -1798,7 +1798,7 @@ void parse_calypsi_linker_line(typ_calypsi_info* ci)
         ci->state = STATE_LOOK_SECTION;
         break;
       }
-      
+
       char* p = get_nth_token(ci->line, 0);
       printf("define chunk: %s\n", p);
 
@@ -1981,7 +1981,7 @@ void parse_calypsi_compiler_line(typ_calypsi_info* ci)
     }
 
     find_and_add_label(ci);
-      
+
     if (count_bytes) {
       add_file_loc(ci);
 
@@ -2104,7 +2104,7 @@ void load_KickAss_list(char* fname)
 
   char segment[256]={0}, module[256]={0};
   lineno = 0;
-  
+
   while (fgets(line, sizeof(line), f)!=NULL) {
       lineno++;
       // Controlla se la riga contiene un indirizzo (assumiamo che inizi con un indirizzo in esadecimale)
@@ -2118,7 +2118,7 @@ void load_KickAss_list(char* fname)
           sscanf(asmname, "%s", segment);
 
           //printf("find the Segment: %s\n", segment);
-      } 
+      }
       else if (starts_with(line, "[") && strstr(line, "]")){
           int len =strstr(line, "]")-line-1;
           strncpy(module, line+1, len);
@@ -2131,7 +2131,7 @@ void load_KickAss_list(char* fname)
           token = strtok(line, ":");
           //printf("find the address: %s\n", token);
           sscanf(token, "%04X", &addr);
-  
+
           type_fileloc fl = { 0 };
           fl.addr = addr;
           fl.lastaddr = 0;
@@ -2139,11 +2139,11 @@ void load_KickAss_list(char* fname)
           fl.file = fname;
           fl.lineno = lineno;
           add_to_list(fl);
-         
+
           //printf("Lista: addr %d, module %s, file %s, line %d \n", addr, module, fname, lineno);
       }
-      
-    } 
+
+    }
     fclose(f);
     load_kickass_map(fname);
   }
@@ -2198,12 +2198,12 @@ void listSearch(void)
         printf("Loading \"%s\"...\n", dir->d_name);
         load_lbl(dir->d_name);
       }
-      // .klist = KickAss Compiler 
+      // .klist = KickAss Compiler
       if (ext != NULL && strcmp(ext, ".klist") == 0)
       {
         printf("Loading \"%s\"...\n", dir->d_name);
         load_KickAss_list(dir->d_name);
-      }   
+      }
       if (ext != NULL && strcmp(ext, ".clst") == 0)
       {
         printf("Loading \"%s\"...\n", dir->d_name);
@@ -2403,7 +2403,7 @@ int parse_indices(char* str, int* x, int* y)
         break;
 
         // - - - -
-        
+
       case 2:
         if (str[k] == '[')
         {
@@ -2495,7 +2495,7 @@ void print_seam(int addr, int chars_per_row, int mcm_flag, int ext_attrib_flag, 
   printf("  $%08X : clr1 = $%02X : %%%s\n", clr_addr+1, clr1, toBinaryString(clr1, NULL));
 
   unsigned char* palette = get_palette();
-  
+
   // check if GOTOX is SET
   if (clr0 & 0x10) {
     printf("\x1b[38;2;255;0;0mGOTOX is SET" KNRM "\n");
@@ -2512,7 +2512,7 @@ void print_seam(int addr, int chars_per_row, int mcm_flag, int ext_attrib_flag, 
     printf("  .transparent_flag = %d\n", transparent_flag);
     printf("  .background_flag = %d\n", background_flag);
     printf("  .rowmask_flag = %d\n", rowmask_flag);
-    printf("  .foreground_flag = %d\n", foreground_flag); 
+    printf("  .foreground_flag = %d\n", foreground_flag);
 
     printf("  .rowmask = %%%s\n", toBinaryString(clr1, NULL));
   }
@@ -2585,10 +2585,10 @@ void set_field(int* mem, int start_bit, int num_bits, int value)
 {
     // Create a mask with the specified bit range set to 1
     int mask = ((1 << num_bits) - 1) << start_bit;
-    
+
     // Clear the bitfield in the original value (bitwise AND with the inverse of the mask)
     *mem &= ~mask;
-    
+
     // Shift the value into the correct position (align it to the starting bit)
     value &= (1 << num_bits) - 1; // Ensure value fits within the specified bit width
     *mem |= value << start_bit; // Set the value in the specified bitfield
@@ -2834,7 +2834,7 @@ void cmdBasicList(void)
 
   int ptr = 0x2001;
   bool quote_flag = false;
-  
+
   while (ptr != 0x0000)
   {
     int nextptr = get_mm_word(ptr);
@@ -2864,7 +2864,7 @@ void cmdBasicList(void)
           strcat(line, mapCmds[token]);
       }
       else
-      { 
+      {
         if (token == '"')
           quote_flag = !quote_flag;
 
@@ -3798,7 +3798,7 @@ void getz(void)
   char* strLine = strtok(inbuf, "\n");
   for (int k = 0; k < PCCNT; k++)
   {
-    sscanf(strLine, "%X", &zval[k]); 
+    sscanf(strLine, "%X", &zval[k]);
     strLine = strtok(NULL, "\n");
   }
 }
@@ -4063,7 +4063,7 @@ void cmdLocals(void)
     int* addresses = get_backtrace_addresses();
     addr = addresses[traceframe-1];
   }
-  
+
   // assess which function it resides in
   type_funcinfo* fi = find_current_function(addr);
   if (fi == NULL)
@@ -5025,7 +5025,7 @@ void print_qword_at_address(char* token, int addr, bool useAddr28, bool show_dec
   if (show_decimal)
     printf(" %s: /d decimal not supported for QWORD\n", token);
   else
-    printf(" %s: %02X%02X%02X%02X%02X%02X%02X%02X\n", token, 
+    printf(" %s: %02X%02X%02X%02X%02X%02X%02X%02X\n", token,
         mem.b[7], mem.b[6], mem.b[5], mem.b[4],
         mem.b[3], mem.b[2], mem.b[1], mem.b[0]);
 }
@@ -5461,7 +5461,7 @@ void call_temp_routine(char** routine)
 
     usleep(100000);
 
-    // un-pause cpu to execute 
+    // un-pause cpu to execute
     serialWrite("t0\n");
 
     usleep(100000);
@@ -5998,21 +5998,8 @@ void cmdMapping(void)
   printf("MAPH = %04X (MB_H = %02X)  :  MAPL = %04X (MB_L = %02X)\n", reg.maph, mb_maph, reg.mapl, mb_mapl);
 
   printf("\n");
-  printf("$D030 register (highest priority)\n");
-  printf("==============\n");
-  if (reg_d030 & 0x08)
-    printf("- $8000 <-- $3,8000 %s\n", get_rom_chunk_name(0, 0x38000));
-  if (reg_d030 & 0x10)
-    printf("- $A000 <-- $3,A000 %s\n", get_rom_chunk_name(0, 0x3a000));
-  if (reg_d030 & 0x20)
-    printf("- $C000 <-- $2,C000 %s\n", get_rom_chunk_name(0, 0x2c000));
-  if (reg_d030 & 0x40)
-    printf("- Selected C65 charset(?)\n");
-  if (reg_d030 & 0x80)
-    printf("- $E000 <-- $3,E000 %s\n", get_rom_chunk_name(0, 0x3e000));
-  printf("\n");
 
-  printf("\"MAP\" mechanism (lower priority)\n");
+  printf("\"MAP\" mechanism (overrides $D030 and $01)\n");
   printf("===============\n");
   int mapl_blocks = reg.mapl >> 12;
   int mapl_offset = (reg.mapl & 0x0fff) << 8;
@@ -6042,11 +6029,30 @@ void cmdMapping(void)
   }
   printf("\n");
 
-  printf("$01 register (lowest priority)\n");
+  printf("$D030 register (overrides $01)\n");
+  printf("==============\n");
+  if (reg_d030 & 0x08)
+    printf("- $8000 <-- $2,8000 %s\n", get_rom_chunk_name(0, 0x28000));
+  if (reg_d030 & 0x10)
+    printf("- $A000 <-- $2,A000 %s\n", get_rom_chunk_name(0, 0x2a000));
+  if (reg_d030 & 0x20)
+    printf("- $C000 <-- $2,C000 %s\n", get_rom_chunk_name(0, 0x2c000));
+  if (reg_d030 & 0x80)
+    printf("- $E000 <-- $2,E000 %s\n", get_rom_chunk_name(0, 0x2e000));
+  printf("\n");
+
+  printf("$01 register\n");
   printf("===========\n");
-  if (reg_01 & 0x01)
+
+  // 133 = 1000 0101
+
+  if (!(reg_01 & 0x03))
+    printf("- All RAM\n");
+  if ((reg_01 & 0x03) == 0x03)
     printf("- $A000 <-- $2,A000 (C64 BASIC)\n");
-  if (!(reg_01 & 0x04))
+  if (reg_01 & 0x07)
+    printf("- $D000 <-- I/O\n");
+  else if (reg_01 & 0x03)
     printf("- $D000 <-- $2,D000 (C64 CHARSET)\n");
   if (reg_01 & 0x02)
     printf("- $E000 <-- $2,E000 (C64 KERNAL)\n");
