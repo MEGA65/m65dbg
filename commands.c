@@ -2827,7 +2827,7 @@ char mapPetscii[256][20] =
   // 0x90 - 0x9f
   "{black}", "{up}", "{reverse-off}", "{shift-clrhome}", "{shift-instdel}", "{brown}", "{pink}", "{dk-grey}", "{grey}", "{lt-green}", "{lt-blue}", "{lt-grey}", "{purple}", "{left}", "{yellow}", "{cyan}",
   // 0xa0 - 0xaf
-  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "_",
   // 0xb0 - 0xbf
   "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
   // 0xc0 - 0xcf
@@ -2921,6 +2921,8 @@ void cmdBasicList(void)
   int start = -1;
   int end = -1;
   char* df;
+  char searchstr[50] = { 0 };
+  bool searchflag = false;
 
   while ( (df = strtok(NULL, " ")) != NULL)
   {
@@ -2928,14 +2930,55 @@ void cmdBasicList(void)
     {
       dataflag = true;
     }
+    else if (df[0] == '"')
+    {
+      strcpy(searchstr, df+1);
+      searchflag = true;
+      if (searchstr[strlen(searchstr) - 1] == '"')
+      {
+        searchflag = false;
+        searchstr[strlen(searchstr) - 1] = '\0';
+      }
+    }
+    else if (searchflag)
+    {
+      strcat(searchstr, " ");
+      strcat(searchstr, df);
+      if (searchstr[strlen(searchstr) - 1] == '"')
+      {
+        searchflag = false;
+        searchstr[strlen(searchstr) - 1] = '\0';
+      }
+    }
     else if (start == -1)
     {
-      start = get_sym_value(df);
-      end = start;
+      if (df[0] == '-')
+      {
+        start = 0;
+        end = 0;
+      }
+      else
+      {
+        if (isdigit((int)df[0]))
+          start = atoi(df);
+        else
+          start = get_sym_value(df);
+        end = start;
+      }
     }
     else if (end == start)
     {
-      end = get_sym_value(df);
+      if (df[0] == '-')
+      {
+        end = 40000;
+      }
+      else
+      {
+        if (isdigit((int)df[0]))
+          end = atoi(df);
+        else
+          end = get_sym_value(df);
+      }
     }
   }
 
@@ -2945,6 +2988,7 @@ void cmdBasicList(void)
 
   while (ptr != 0x0000)
   {
+    bool rem_flag = false;
     orig_ptr = ptr;
     int nextptr = get_mm_word(ptr);
     if (nextptr == 0x0000)
@@ -2985,15 +3029,22 @@ void cmdBasicList(void)
           quote_flag = !quote_flag;
 
         if ( (mapBasTok[token][0] == '\0' && token != 0)
-            || (quote_flag && (token < 0x20 || token >= 0x80) ) )
+            || ((quote_flag || rem_flag) && (token < 0x20 || token >= 0x80) ) )
         {
-          if (quote_flag)
+          if (quote_flag || rem_flag)
           {
-            strcpy(s,mapPetscii[token]);
-            if (strlen(s) == 0) {
-              sprintf(s, "{$%02X}", token);
+            if (token == 0 && rem_flag)
+            {
+              // skip null on rem lines
             }
-            strcat(line, s);
+            else
+            {
+              strcpy(s,mapPetscii[token]);
+              if (strlen(s) == 0) {
+                sprintf(s, "{$%02X}", token);
+              }
+              strcat(line, s);
+            }
           }
           else
           {
@@ -3011,14 +3062,24 @@ void cmdBasicList(void)
           }
         }
         else
+        {
           strcat(line, mapBasTok[token]);
+          if (strcmp(mapBasTok[token], "REM") == 0)
+            rem_flag = true;
+        }
       }
       // printf("ptr=%04X, token=%02X\n", ptr, token);
       // if (ptr > 0x3140) return;
     }
     while (token != 0x00);
 
-    if (inrange)
+    bool searchfound = false;
+    if (searchstr[0] == '\0')
+      searchfound = true;
+    else if (strstr(line, searchstr) != 0)
+      searchfound = true;
+
+    if (inrange && searchfound)
     {
       printf("%s\n", line);
       if (dataflag)
