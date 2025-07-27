@@ -5377,7 +5377,7 @@ void scan_single_letter_vars(char *token)
   if (token == NULL)
   {
     printf("single letter vars:\n");
-    printf("------------------:\n");
+    printf("------------------\n");
   }
 
   for (int k = 'a'; k <= 'z'; k++)
@@ -5428,13 +5428,183 @@ void scan_single_letter_vars(char *token)
   printf("\n");
 }
 
+void prepare_array_name(char *name, char varnam1, char varnam2, char type)
+{
+  if (varnam2 == 0x20)
+    sprintf(name, "~~%c%c", varnam1, type);
+  else
+    sprintf(name, "~~%c%c%c", varnam1, varnam2, type);
+}
+
+void recurse_into_array(int dim_cnt, int dim_idx, int *dims, char type, int *data_addr)
+{
+  if (dim_idx > 0)
+  {
+      for (int k = dim_cnt -1; k > dim_idx; k--)
+        printf("  ");
+      printf("{\n");
+    for (int z = 0; z <= dims[dim_idx]; z++)
+    {
+
+      recurse_into_array(dim_cnt, dim_idx - 1, dims, type, data_addr);
+      if (z != dims[dim_idx])
+        printf(",\n");
+      else
+        printf("\n");
+    }
+      for (int k = dim_cnt -1; k > dim_idx; k--)
+        printf("  ");
+      printf("}");
+  }
+  else
+  {
+    for (int k = dim_cnt -1; k > dim_idx; k--)
+      printf("  ");
+
+    printf("{ ");
+
+    for (int k = 0; k <= dims[dim_idx]; k++)
+    {
+      if (type == '&') {
+        int byte_val = get_mm_byte(*data_addr);
+        printf("%d", byte_val);
+        *data_addr += 1;
+      }
+
+      if (type == '%') {
+        int int_val  = (get_mm_byte(*data_addr) << 8)
+                        + get_mm_byte(*data_addr + 1);
+        printf("%d", int_val);
+        *data_addr += 2;
+      }
+
+      if (type == '"') {
+        double float_val = get_float_at_addr(*data_addr, true);
+        printf("%g", float_val);
+        *data_addr += 5;
+      }
+
+      if (type == '$') {
+        int str_len = get_mm_byte(*data_addr);
+        *data_addr += 1;
+        int str_ptr = get_mm_word(*data_addr);
+        *data_addr += 2;
+
+        char sval[10];
+        sprintf(sval, "%06X", 0x10000 + str_ptr);
+        print_str_maxlen(sval, str_len, 1);
+      }
+
+      if (k < dims[dim_idx])
+      {
+        printf(", ");
+      }
+    }
+
+    printf("}");
+  }
+}
+
+void show_array_name(char *token, char *name, char type, int dimensions, int* dims, int data_addr)
+{
+  // if filtering on this specific name, then we can show contents of array
+  if (token != NULL && strcmp(token, name+2) != 0)
+    return;
+
+  // show array name
+  printf("%s(", name+2);
+  // show dimensions
+  for (int k = 0; k < dimensions; k++)
+  {
+    printf("%d", dims[k]);
+    if (k < dimensions - 1)
+      printf(", ");
+  }
+  printf(")");
+
+  if (token == NULL)
+  {
+    printf("\n");
+    return;
+  }
+
+  // if filtering on this specific name, then we can show contents of array
+  if (strcmp(token, name+2) == 0)
+  {
+    printf(" = \n");
+    recurse_into_array(dimensions, dimensions - 1, dims, type, &data_addr);
+    printf("\n");
+  }
+}
+
+void scan_arrays(char *token)
+{
+  char name[5];
+  if (token == NULL)
+  {
+    printf("array vars:\n");
+    printf("----------\n");
+  }
+
+  int addr = 0x12000;
+  int maxaddr = 0x1f6ff;
+  int cnt = 0;
+
+  while (addr + cnt < maxaddr)
+  {
+
+    mem_data mem = get_mem(addr + cnt, true);
+    char varnam1 = (char)mem.b[0];
+    char varnam2 = (char)mem.b[1];
+    char vartype = (char)mem.b[2];
+
+    int size = mem.b[3] + (mem.b[4] << 8);
+    int dimensions = mem.b[5];
+    int dims[100] = { 0 };
+    int idx = 6;
+
+    for (int k = dimensions-1; k >= 0; k--)
+    {
+      dims[k] = (mem.b[idx] << 8) + mem.b[idx+1] - 1;
+      idx += 2;
+    }
+
+    if (varnam1 == '\0' && varnam2 == '\0')
+      break;
+
+    if (vartype == '&') {
+      prepare_array_name(name, varnam1, varnam2, '&');
+      add_symbol_if_not_exist(name, addr + cnt);
+    }
+
+    if (vartype == '%') {
+      prepare_array_name(name, varnam1, varnam2, '%');
+      add_symbol_if_not_exist(name, addr + cnt);
+    }
+
+    if (vartype == '"') {
+      prepare_array_name(name, varnam1, varnam2, '\0');
+      add_symbol_if_not_exist(name, addr + cnt);
+    }
+
+    if (vartype == '$') {
+      prepare_array_name(name, varnam1, varnam2, '$');
+      add_symbol_if_not_exist(name, addr + cnt);
+    }
+
+    show_array_name(token, name, vartype, dimensions, dims, addr + cnt + idx);
+
+    cnt += size;
+  }
+}
+
 void scan_two_letter_vars(char *token)
 {
   char name[5];
   if (token == NULL)
   {
     printf("two letter vars:\n");
-    printf("---------------:\n");
+    printf("---------------\n");
   }
 
   int addr = 0x0f700;
@@ -5533,6 +5703,7 @@ void print_basic_var(char* token)
   read_scalar_var_mem();
   scan_single_letter_vars(token);
   scan_two_letter_vars(token);
+  scan_arrays(token);
   // todo: scan for arrays too
 }
 
