@@ -146,6 +146,7 @@ typedef struct
   void (*func)(void);
   char* params;
   char* help;
+  char** category;
 } type_command_details;
 
 typedef struct tse

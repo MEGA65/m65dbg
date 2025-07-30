@@ -1,5 +1,8 @@
 /* vim: set expandtab shiftwidth=2 tabstop=2: */
 
+/* Defining following avoid warning for _BSD_SOURCE */ 
+#define _DEFAULT_SOURCE _DEFAULT_SOURCE
+
 #define _BSD_SOURCE _BSD_SOURCE
 #include <stdio.h>
 #include <string.h>
@@ -10,6 +13,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <math.h>
+#include <stdbool.h>
 #include "commands.h"
 #include "serial.h"
 #include "gs4510.h"
@@ -298,97 +302,109 @@ int dis_scope = 10;
 int softbrkaddr = 0;
 unsigned char softbrkmem[3] = { 0 };
 
+char *command_categories[] = {
+  "unknown", /* Unknown's are printed first */
+  "memory",
+  "inspect"
+  "assembly", 
+  "trace", "watch", "stack",
+  "tool", /* Tool */
+  "config",
+  "misc",
+  NULL
+}; 
+
 type_command_details command_details[] =
 {
-  { "?", cmdRawHelp, NULL, "Shows help information for raw/native monitor commands" },
-  { "help", cmdHelp, "[<cmdname>]",  "Shows help information for m65dbg commands. If optional <cmdname> given, show help for that command only." },
-  { "dump", cmdDump, "<addr16> [<count>]", "Dumps memory (CPU context) at given address (with character representation in right-column)" },
-  { "mdump", cmdMDump, "<addr28> [<count>]", "Dumps memory (28-bit addresses) at given address (with character representation in right-column)" },
-  { "a", cmdAssemble, "<addr28>", "Assembles instructions at the given <addr28> location." },
-  { "dis", cmdDisassemble, "[<addr16> [<count>]]", "Disassembles the instruction at <addr> or at PC. If <count> exists, it will dissembly that many instructions onwards" },
-  { "mdis", cmdMDisassemble, "[<addr28> [<count>]]", "Disassembles the instruction at <addr> or at PC. If <count> exists, it will dissembly that many instructions onwards" },
-  { "c", cmdContinue, "[<addr>]", "continue (until optional <addr>) (equivalent to t0, but more m65dbg-friendly)"},
-  { "sc", cmdSoftContinue, "[<addr>]", "soft continue (until optional <addr>) (equivalent to t0, but more m65dbg-friendly)"},
-  { "step", cmdStep, "[<count>]", "Step into next instruction. If <count> is specified, perform that many steps" }, // equate to pressing 'enter' in raw monitor
-  { "n", cmdNext, "[<count>]", "Step over to next instruction (software-based, slow). If <count> is specified, perform that many steps" },
-  { "next", cmdHardNext, "[<count>]", "Step over to next instruction (hardware-based, fast, xemu-only, for now). If <count> is specified, perform that many steps" },
-  { "finish", cmdFinish, NULL, "Continue running until function returns (ie, step-out-from)" },
-  { "pb", cmdPrintByte, "<addr>", "Prints the byte-value of the given address" },
-  { "pw", cmdPrintWord, "<addr>", "Prints the word-value of the given address" },
-  { "pd", cmdPrintDWord, "<addr>", "Prints the dword-value of the given address" },
-  { "pq", cmdPrintQWord, "<addr>", "Prints the qword-value of the given address" },
-  { "ps", cmdPrintString, "<addr>", "Prints the null-terminated string-value found at the given address" },
-  { "pbas", cmdPrintBasicVar, "[<varname>]", "Print the value of specified basic var. If none given, print value of all vars." },
-  { "pmb", cmdPrintMByte, "<addr28>", "Prints the byte-value of the given 28-bit address" },
-  { "pmw", cmdPrintMWord, "<addr28>", "Prints the word-value of the given 28-bit address" },
-  { "pmd", cmdPrintMDWord, "<addr28>", "Prints the dword-value of the given 28-bit address" },
-  { "pmq", cmdPrintMQWord, "<addr28>", "Prints the qword-value of the given 28-bit address" },
-  { "pms", cmdPrintMString, "<addr28>", "Prints the null-terminated string-value found at the given 28-bit address" },
-  { "pmf", cmdPrintMFloat, "<addr28>", "Prints the BASIC float value at the given 28-bit address" },
-  { "cls", cmdClearScreen, NULL, "Clears the screen" },
-  { "autocls", cmdAutoClearScreen, "0/1", "If set to 1, clears the screen prior to every step/next command" },
-  { "romw", cmdRomW, "0/1", "If set to 1, rom is writable. If set to 0, rom is read-only. If no parameter, it toggles" },
-  { "break", cmdSetBreakpoint, "<addr>", "Sets the hardware breakpoint to the desired address" },
-  { "sbreak", cmdSetSoftwareBreakpoint, "<addr>", "Sets the software breakpoint to the desired address" },
-  { "wb", cmdWatchByte, "<addr>", "Watches the byte-value of the given address" },
-  { "ww", cmdWatchWord, "<addr>", "Watches the word-value of the given address" },
-  { "wd", cmdWatchDWord, "<addr>", "Watches the dword-value of the given address" },
-  { "wq", cmdWatchQWord, "<addr>", "Watches the qword-value of the given address" },
-  { "ws", cmdWatchString, "<addr>", "Watches the null-terminated string-value found at the given address" },
-  { "wdump", cmdWatchDump, "<addr> [<count>]", "Watches a dump of bytes at the given address" },
-  { "wmb", cmdWatchMByte, "<addr28>", "Watches the byte-value of the given 28-bit address" },
-  { "wmw", cmdWatchMWord, "<addr28>", "Watches the word-value of the given 28-bit address" },
-  { "wmd", cmdWatchMDWord, "<addr28>", "Watches the dword-value of the given 28-bit address" },
-  { "wmq", cmdWatchMQWord, "<addr28>", "Watches the qword-value of the given 28-bit address" },
-  { "wms", cmdWatchMString, "<addr28>", "Watches the null-terminated string-value found at the given 28-bit address" },
-  { "wmf", cmdWatchMFloat, "<addr28>", "Watches a BASIC float value at the given 28-bit address" },
-  { "wmdump", cmdWatchMDump, "<addr28> [<count>]", "Watches an mdump of bytes at the given 28-bit address" },
-  { "watches", cmdWatches, NULL, "Lists all watches and their present values" },
-  { "wdel", cmdDeleteWatch, "<watch#>/all", "Deletes the watch number specified (use 'watches' command to get a list of existing watch numbers)" },
-  { "autowatch", cmdAutoWatch, "0/1", "If set to 1, shows all watches prior to every step/next/dis command" },
-  { "symbol", cmdSymbolValue, "<symbol|$hex>", "retrieves the value of the symbol from the .map file. Alternatively, can find symbol name/s matching given $hex address. If two $hex values are given, it finds all symbols within this range" },
-  { "save", cmdSave, "<binfile> <addr28> <count>", "saves out a memory dump to <binfile> starting from <addr28> and for <count> bytes" },
-  { "load", cmdLoad, "<binfile> <addr28> (<offset> <count>)", "loads in <binfile> to <addr28> (with an optional offset and count of bytes to load)" },
-  { "poke", cmdPoke, "<addr16> <byte/s>", "pokes byte value/s into <addr16> (and beyond, if multiple values)" },
-  { "pokew", cmdPokeW, "<addr16> <word/s>", "pokes word value/s into <addr16> (and beyond, if multiple values)" },
-  { "poked", cmdPokeD, "<addr16> <dword/s>", "pokes dword value/s into <addr16> (and beyond, if multiple values)" },
-  { "pokeq", cmdPokeQ, "<addr16> <qword/s>", "pokes qword value/s into <addr16> (and beyond, if multiple values)" },
-  { "mpoke", cmdMPoke, "<addr28> <byte/s>", "pokes byte value/s into <addr28> (and beyond, if multiple values)" },
-  { "mpokew", cmdMPokeW, "<addr28> <word/s>", "pokes word value/s into <addr28> (and beyond, if multiple values)" },
-  { "mpoked", cmdMPokeD, "<addr28> <dword/s>", "pokes dword value/s into <addr28> (and beyond, if multiple values)" },
-  { "mpokeq", cmdMPokeQ, "<addr28> <qword/s>", "pokes qword value/s into <addr28> (and beyond, if multiple values)" },
-  { "back", cmdBackTrace, NULL, "produces a rough backtrace from the current contents of the stack" },
-  { "up", cmdUpFrame, NULL, "The 'dis' disassembly command will disassemble one stack-level up from the current frame" },
-  { "down", cmdDownFrame, NULL, "The 'dis' disassembly command will disassemble one stack-level down from the current frame" },
-  { "se", cmdSearch, "<addr28> <len> <values>", "Searches the range you specify for the given values (either a list of hex bytes or a \"string\""},
-  { "ss", cmdScreenshot, NULL, "Takes an ascii screenshot of the mega65's screen" },
-  { "ty", cmdType, "[<string>]", "Remote keyboard mode (if optional string provided, acts as one-shot message with carriage-return)" },
-  { "ftp", cmdFtp, NULL, "FTP access to SD-card" },
-  { "petscii", cmdPetscii, "0/1", "In dump commands, respect petscii screen codes" },
-  { "fastmode", cmdFastMode, "0/1", "Used to quickly switch between 2,000,000bps (slow-mode: default) or 4,000,000bps (fast-mode: used in ftp-mode)" },
-  { "scope", cmdScope, "<int>", "the scope-size of the listing to show alongside the disassembly" },
-  { "offs", cmdOffs, "<int>", "the offset of the listing to show alongside the disassembly" },
-  { "val", cmdPrintValue, "<hex/#dec/\%bin/>", "print the given value in hex, decimal and binary" },
-  { "=", cmdForwardDis, "[<count>]", "move forward in disassembly of pc history from 'z' command" },
-  { "-", cmdBackwardDis, "[<count>]", "move backward in disassembly of pc history from 'z' command" },
-  { "mcopy", cmdMCopy, "<src_addr> <dest_addr> <count>", "copy data from source location to destination (28-bit addresses)" },
-  { "locals", cmdLocals, NULL, "Print out the values of any local variables within the current c-function (needs gurce's cc65 .list file)" },
-  { "autolocals", cmdAutoLocals, "0/1", "If set to 1, shows all locals prior to every step/next/dis command" },
-  { "mapping", cmdMapping, NULL, "Summarise the current $D030/MAP/$01 mapping of the system" },
-  { "seam", cmdSeam, "[row][col]", "display attributes of selected SEAM character" },
-  { "blist", cmdBasicList, "[/d] [start] [end]", "list the current basic program (add /d for optional debug output, or optional start/end line number range)" },
+  { "?", cmdRawHelp, NULL, "Shows help information for raw/native monitor commands", (char*[]){ "misc", NULL } },
+  { "help", cmdHelp, "[<cmdname>]",  "Shows help information for m65dbg commands. If optional <cmdname> given, show help for that command only.", (char*[]){ "misc", NULL}  },
+  { "dump", cmdDump, "<addr16> [<count>]", "Dumps memory (CPU context) at given address (with character representation in right-column)", (char*[]){ "memory", NULL } },
+  { "mdump", cmdMDump, "<addr28> [<count>]", "Dumps memory (28-bit addresses) at given address (with character representation in right-column)", (char*[]){ "memory", NULL } },
+  { "a", cmdAssemble, "<addr28>", "Assembles instructions at the given <addr28> location.", (char*[]){ "assembly", NULL } },
+  { "dis", cmdDisassemble, "[<addr16> [<count>]]", "Disassembles the instruction at <addr> or at PC. If <count> exists, it will dissembly that many instructions onwards", (char*[]) {"assembly", NULL} },
+  { "mdis", cmdMDisassemble, "[<addr28> [<count>]]", "Disassembles the instruction at <addr> or at PC. If <count> exists, it will dissembly that many instructions onwards", (char *[]){"assembly", NULL} },
+  { "c", cmdContinue, "[<addr>]", "continue (until optional <addr>) (equivalent to t0, but more m65dbg-friendly)", (char *[]) {"trace", NULL}},
+  { "sc", cmdSoftContinue, "[<addr>]", "soft continue (until optional <addr>) (equivalent to t0, but more m65dbg-friendly)", (char *[]){"trace", NULL}},
+  { "step", cmdStep, "[<count>]", "Step into next instruction. If <count> is specified, perform that many steps", (char *[]){"trace", NULL} }, // equate to pressing 'enter' in raw monitor
+  { "n", cmdNext, "[<count>]", "Step over to next instruction (software-based, slow). If <count> is specified, perform that many steps", (char *[]){"trace", NULL} },
+  { "next", cmdHardNext, "[<count>]", "Step over to next instruction (hardware-based, fast, xemu-only, for now). If <count> is specified, perform that many steps", (char *[]){"trace", NULL} },
+  { "finish", cmdFinish, NULL, "Continue running until function returns (ie, step-out-from)", (char*[]){"trace", NULL} },
+  { "pb", cmdPrintByte, "<addr>", "Prints the byte-value of the given address", (char*[]){"inspect", NULL} },
+  { "pw", cmdPrintWord, "<addr>", "Prints the word-value of the given address", (char*[]){"inspect", NULL} },
+  { "pd", cmdPrintDWord, "<addr>", "Prints the dword-value of the given address", (char*[]){"inspect", NULL } },
+  { "pq", cmdPrintQWord, "<addr>", "Prints the qword-value of the given address", (char*[]){"inspect", NULL } },
+  { "ps", cmdPrintString, "<addr>", "Prints the null-terminated string-value found at the given address", (char*[]){"inspect", NULL } },
+  { "pmb", cmdPrintMByte, "<addr28>", "Prints the byte-value of the given 28-bit address", (char*[]){"inspect", NULL } },
+  { "pmw", cmdPrintMWord, "<addr28>", "Prints the word-value of the given 28-bit address", (char*[]){"inspect", NULL } },
+  { "pmd", cmdPrintMDWord, "<addr28>", "Prints the dword-value of the given 28-bit address", (char*[]){"inspect", NULL } },
+  { "pmq", cmdPrintMQWord, "<addr28>", "Prints the qword-value of the given 28-bit address", (char*[]){"inspect", NULL } },
+  { "pms", cmdPrintMString, "<addr28>", "Prints the null-terminated string-value found at the given 28-bit address", (char*[]){"inspect", NULL } },
+  { "pbas", cmdPrintBasicVar, "[<varname>]", "Print the value of specified basic var. If none given, print value of all vars.", (char*[]){"inspect", NULL } },
+  { "pmf", cmdPrintMFloat, "<addr28>", "Prints the BASIC float value at the given 28-bit address", (char*[]){"inspect", NULL } },
+  { "cls", cmdClearScreen, NULL, "Clears the screen", (char*[]){"misc", NULL } },
+  { "autocls", cmdAutoClearScreen, "0/1", "If set to 1, clears the screen prior to every step/next command", (char*[]){"config", NULL } },
+  { "romw", cmdRomW, "0/1", "If set to 1, rom is writable. If set to 0, rom is read-only. If no parameter, it toggles", (char*[]){"config", NULL } },
+  { "break", cmdSetBreakpoint, "<addr>", "Sets the hardware breakpoint to the desired address", (char*[]){"trace", NULL } },
+  { "sbreak", cmdSetSoftwareBreakpoint, "<addr>", "Sets the software breakpoint to the desired address", (char*[]){"trace", NULL } },
+  { "wb", cmdWatchByte, "<addr>", "Watches the byte-value of the given address", (char*[]){"watch", NULL } },
+  { "ww", cmdWatchWord, "<addr>", "Watches the word-value of the given address", (char*[]){"watch", NULL } },
+  { "wd", cmdWatchDWord, "<addr>", "Watches the dword-value of the given address", (char*[]){"watch", NULL } },
+  { "wq", cmdWatchQWord, "<addr>", "Watches the qword-value of the given address", (char*[]){"watch", NULL } },
+  { "ws", cmdWatchString, "<addr>", "Watches the null-terminated string-value found at the given address", (char*[]){"watch", NULL } },
+  { "wdump", cmdWatchDump, "<addr> [<count>]", "Watches a dump of bytes at the given address", (char*[]){"watch", NULL } },
+  { "wmb", cmdWatchMByte, "<addr28>", "Watches the byte-value of the given 28-bit address", (char*[]){"watch", NULL } },
+  { "wmw", cmdWatchMWord, "<addr28>", "Watches the word-value of the given 28-bit address", (char*[]){"watch", NULL } },
+  { "wmd", cmdWatchMDWord, "<addr28>", "Watches the dword-value of the given 28-bit address", (char*[]){"watch", NULL } },
+  { "wmq", cmdWatchMQWord, "<addr28>", "Watches the qword-value of the given 28-bit address", (char*[]){"watch", NULL } },
+  { "wms", cmdWatchMString, "<addr28>", "Watches the null-terminated string-value found at the given 28-bit address", (char*[]){"watch", NULL } },
+  { "wmf", cmdWatchMFloat, "<addr28>", "Watches a BASIC float value at the given 28-bit address", (char*[]){"watch", NULL } },
+  { "wmdump", cmdWatchMDump, "<addr28> [<count>]", "Watches an mdump of bytes at the given 28-bit address", (char*[]){"watch", NULL } },
+  { "watches", cmdWatches, NULL, "Lists all watches and their present values", (char*[]){"watch", NULL } },
+  { "wdel", cmdDeleteWatch, "<watch#>/all", "Deletes the watch number specified (use 'watches' command to get a list of existing watch numbers)", (char*[]){"watch", NULL } },
+  { "autowatch", cmdAutoWatch, "0/1", "If set to 1, shows all watches prior to every step/next/dis command", (char*[]){"watch", NULL } },
+  { "symbol", cmdSymbolValue, "<symbol|$hex>", "retrieves the value of the symbol from the .map file. Alternatively, can find symbol name/s matching given $hex address. If two $hex values are given, it finds all symbols within this range", (char*[]){"tool", NULL } },
+  { "save", cmdSave, "<binfile> <addr28> <count>", "saves out a memory dump to <binfile> starting from <addr28> and for <count> bytes", (char*[]){"memory", NULL } },
+  { "load", cmdLoad, "<binfile> <addr28> (<offset> <count>)", "loads in <binfile> to <addr28> (with an optional offset and count of bytes to load)", (char*[]){"memory", NULL } },
+  { "poke", cmdPoke, "<addr16> <byte/s>", "pokes byte value/s into <addr16> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "pokew", cmdPokeW, "<addr16> <word/s>", "pokes word value/s into <addr16> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "poked", cmdPokeD, "<addr16> <dword/s>", "pokes dword value/s into <addr16> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "pokeq", cmdPokeQ, "<addr16> <qword/s>", "pokes qword value/s into <addr16> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "mpoke", cmdMPoke, "<addr28> <byte/s>", "pokes byte value/s into <addr28> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "mpokew", cmdMPokeW, "<addr28> <word/s>", "pokes word value/s into <addr28> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "mpoked", cmdMPokeD, "<addr28> <dword/s>", "pokes dword value/s into <addr28> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "mpokeq", cmdMPokeQ, "<addr28> <qword/s>", "pokes qword value/s into <addr28> (and beyond, if multiple values)", (char*[]){"memory", NULL } },
+  { "back", cmdBackTrace, NULL, "produces a rough backtrace from the current contents of the stack", (char*[]){"stack", NULL } },
+  { "up", cmdUpFrame, NULL, "The 'dis' disassembly command will disassemble one stack-level up from the current frame", (char*[]){"stack", NULL } },
+  { "down", cmdDownFrame, NULL, "The 'dis' disassembly command will disassemble one stack-level down from the current frame", (char*[]){"stack", NULL } },
+  { "se", cmdSearch, "<addr28> <len> <values>", "Searches the range you specify for the given values (either a list of hex bytes or a \"string\"", (char*[]){"memory", NULL} },
+  { "ss", cmdScreenshot, NULL, "Takes an ascii screenshot of the mega65's screen", (char*[]){"misc", NULL } },
+  { "ty", cmdType, "[<string>]", "Remote keyboard mode (if optional string provided, acts as one-shot message with carriage-return)", (char*[]){"misc", NULL } },
+  { "ftp", cmdFtp, NULL, "FTP access to SD-card", (char*[]){"misc", NULL } },
+  { "petscii", cmdPetscii, "0/1", "In dump commands, respect petscii screen codes", (char*[]){"config", NULL } },
+  { "fastmode", cmdFastMode, "0/1", "Used to quickly switch between 2,000,000bps (slow-mode: default) or 4,000,000bps (fast-mode: used in ftp-mode)", (char*[]){"config", NULL } },
+  { "scope", cmdScope, "<int>", "the scope-size of the listing to show alongside the disassembly", (char*[]){"config", NULL } },
+  { "offs", cmdOffs, "<int>", "the offset of the listing to show alongside the disassembly", (char*[]){"config", NULL } },
+  { "val", cmdPrintValue, "<hex/#dec/\%bin/>", "print the given value in hex, decimal and binary", (char*[]){"display", NULL } },
+  { "=", cmdForwardDis, "[<count>]", "move forward in disassembly of pc history from 'z' command", (char*[]){"ussembly", NULL } },
+  { "-", cmdBackwardDis, "[<count>]", "move backward in disassembly of pc history from 'z' command", (char*[]){"assembly, NULL" } },
+  { "mcopy", cmdMCopy, "<src_addr> <dest_addr> <count>", "copy data from source location to destination (28-bit addresses)", (char*[]){"memory", NULL } },
+  { "locals", cmdLocals, NULL, "Print out the values of any local variables within the current c-function (needs gurce's cc65 .list file)", (char*[]){"tool", NULL } },
+  { "autolocals", cmdAutoLocals, "0/1", "If set to 1, shows all locals prior to every step/next/dis command", (char*[]){"tool", NULL } },
+  { "mapping", cmdMapping, NULL, "Summarise the current $D030/MAP/$01 mapping of the system", (char*[]){"memory", NULL } },
+  { "seam", cmdSeam, "[row][col]", "display attributes of selected SEAM character", (char*[]){"misc", NULL } },
+  { "blist", cmdBasicList, "[/d] [start] [end]", "list the current basic program (add /d for optional debug output, or optional start/end line number range)", (char*[]){"unknown", NULL } },
   { "sprite", cmdSprite, "<spridx>", "print out the bits of the sprite at the given index\n"
 "                 (based on currently selected vicii bank at $dd00)\n"
-"                 If the index is in the form $xxxx, it is treated as an absolute memory address." },
+"                 If the index is in the form $xxxx, it is treated as an absolute memory address.", (char*[]){"unknown", NULL } },
   { "char", cmdChar, "<charidx> [<count>]", "print out the bits of the char at the given index\n"
 "                 (based on currently selected vicii bank at $dd00)\n"
-"                 If the index is in the form $xxxx, it is treated as an absolute memory address." },
-  { "set", cmdSet, "<addr> <string|bytes>", "set bytes at the given address to the desired string or bytes" },
-  { "reload", cmdReload, NULL, "reloads any list and map files (in-case you've rebuilt them recently)" },
-  { "go", cmdGo, "<addr>", "sets the PC to the desired address." },
-  { "palette", cmdPalette, "<startidx> <endidx>", "Shows details of the palette for the given range. If no range given, the first 32 colour indices are selected." },
-  { "hyppo", cmdHyppo, "<servicename>", "Performs the desired hyppo call. Note that in many cases, you will have to prepare inputs prior to this call, and assess outputs after the call." },
-  { NULL, NULL, NULL, NULL }
+"                 If the index is in the form $xxxx, it is treated as an absolute memory address.", (char*[]){"unknown", NULL } },
+  { "set", cmdSet, "<addr> <string|bytes>", "set bytes at the given address to the desired string or bytes", (char*[]){"unknown", NULL } },
+  { "reload", cmdReload, NULL, "reloads any list and map files (in-case you've rebuilt them recently)", (char*[]){"unknown", NULL } },
+  { "go", cmdGo, "<addr>", "sets the PC to the desired address.", (char*[]){"unknown", NULL } },
+  { "palette", cmdPalette, "<startidx> <endidx>", "Shows details of the palette for the given range. If no range given, the first 32 colour indices are selected.", (char*[]){"unknown", NULL } },
+  { "hyppo", cmdHyppo, "<servicename>", "Performs the desired hyppo call. Note that in many cases, you will have to prepare inputs prior to this call, and assess outputs after the call.", (char*[]){"unknown", NULL } },
+  { NULL, NULL, NULL, NULL, (char*[]){NULL} }
 };
 
 char* get_extension(char* fname)
@@ -3669,37 +3685,75 @@ char *strlower(char *str)
   return str;
 }
 
+void cmdHelpShowCmd(type_command_details cd) {
+  if (cd.params == NULL)
+    printf("    %s = %s\n", cd.name, cd.help);
+  else
+    printf("    %s %s = %s\n", cd.name, cd.params, cd.help);
+}
+
+//
+// help <category>  _or_ 
+//   Display all commands for the category. 
+// help <cmdName>   _or_
+//   Display that specific cmdName help. 
+// help
+//   Display all categories. 
 void cmdHelp(void)
 {
   // get address from parameter?
-  char* cmdname = strtok(NULL, " ");
-  if (cmdname)
-    strlower(cmdname);
+  char* arg = strtok(NULL, " ");
+  if (arg) {
+    strlower(arg);
+    bool argIsCategory = false; 
 
-  if (cmdname == NULL) {
-    printf("m65dbg commands\n"
-           "===============\n");
-  }
+    // Check if cmdName is actually category. 
+    //
+    for (char **category = command_categories; *category != NULL; category++) {
+      if(strcmp(arg, *category) == 0) {
+        // User performed: help <category> 
+        argIsCategory = true;
 
-  for (int k = 0; command_details[k].name != NULL; k++)
-  {
-    type_command_details cd = command_details[k];
-
-    if (cmdname == NULL || strcmp(cd.name, cmdname) == 0)
-    {
-      if (cd.params == NULL)
-        printf("%s = %s\n", cd.name, cd.help);
-      else
-        printf("%s %s = %s\n", cd.name, cd.params, cd.help);
+        printf("m65dbg command help\n"
+               "===================\n"
+               "Commands for :%s\n", *category);
+        for (type_command_details *cd = command_details; cd->name != NULL; cd++) {
+          for (char **cdCats = cd->category; *cdCats != NULL; cdCats++) {
+            if (strcmp(*cdCats, *category) == 0) {
+              cmdHelpShowCmd(*cd); 
+            }
+          }
+          
+        }
+        break; // No need to check further categories. 
+      }
     }
-  }
-
-  if (cmdname == NULL) {
-    printf(
-     "[ENTER] = repeat last command\n"
-     "q/x/exit = exit the program\n"
-     );
-  }
+    if (!argIsCategory) { 
+      printf("m65dbg command help\n"
+             "===================\n");
+      bool cmdFound = false; 
+      for (type_command_details *cd = command_details; cd->name != NULL; cd++) {
+        if(strcmp(cd->name, arg) == 0) {
+          cmdHelpShowCmd(*cd); 
+          cmdFound = true; 
+        }
+      }
+      if (!cmdFound) {
+        printf("  Unable to find command %s\n", arg); 
+      }
+    }
+  } else {
+    printf("m65dbg command help\n"
+           "===================\n"
+           "Categories:\n");
+    for( char **category = command_categories; *category != NULL; category++) {
+      printf("  %s\n", *category);
+      printf(
+       "[ENTER] = repeat last command\n"
+       "q/x/exit = exit the program\n"
+      );
+    }
+  } 
 }
 
 void print_char(int c)

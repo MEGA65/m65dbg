@@ -4,6 +4,9 @@
  * m65dbg - An enhanced remote serial debugger/monitor for the mega65 project
  **/
 
+/* Defining following avoid warning for _BSD_SOURCE */ 
+#define _DEFAULT_SOURCE _DEFAULT_SOURCE
+
 #define _BSD_SOURCE _BSD_SOURCE
 #include <stdio.h>
 #include <string.h>
