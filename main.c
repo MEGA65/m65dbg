@@ -152,24 +152,28 @@ char* hyppo_service_gen(const char* text, int state)
     return NULL; // No more matches
 }
 
+extern int cntMapB65to11;
+extern TYP_MAP_ENTRY_11_TO_B65 mapb65to11[];
 
 char* my_generator(const char* text, int state)
 {
   static int len;
   static type_symmap_entry* iter = NULL;
   static int cmd_idx = 0;
+  static int k = 0;
 
   if( !state )
   {
     len = strlen(text);
     iter = lstSymMap;
     cmd_idx = 0;
+    k = 0;
   }
 
   // check if it is a symbol name
   while(iter != NULL)
   {
-    if( strncmp(iter->symbol, text, len) == 0 )
+    if (strncmp(iter->symbol, text, len) == 0 )
     {
       char *s = strdup(iter->symbol);
       iter = iter->next;
@@ -188,6 +192,16 @@ char* my_generator(const char* text, int state)
       return s;
     }
     cmd_idx++;
+  }
+
+  for (; k < cntMapB65to11; k++)
+  {
+    if (strncmp(mapb65to11[k].eleven, text, len) == 0)
+    {
+      char *s = strdup(mapb65to11[k].eleven);
+      k++;
+      return s;
+    }
   }
 
   return((char *)NULL);
