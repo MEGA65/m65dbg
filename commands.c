@@ -117,6 +117,7 @@ hyppo_err hyppo_errors[] = {
 };
 
 // a few function prototypes
+char *strlower(char *str);
 mem_data get_mem(int addr, bool useAddr28);
 void print_byte_at_addr(char* token, int addr, bool useAddr28, bool show_decimal, bool show_char, bool show_binary);
 void print_word_at_address(char* token, int addr, bool useAddr28, bool show_decimal);
@@ -2946,6 +2947,48 @@ char mapEscTok[256][12] =
   "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
 };
 
+
+TYP_MAP_ENTRY_11_TO_B65 mapb65to11[100];
+
+int cntMapB65to11 = 0;
+
+
+void check_for_eleven_var_names(bool rem_flag, char *line)
+{
+  // check for eleven rem hints
+  if (rem_flag)
+  {
+    // found a var-name mapping?
+    if (strstr(line, " = :") != 0)
+    {
+      char eleven_name[64];
+      char b65_name[4];
+      sscanf(line, "%*d %*s %s %*c :%s", eleven_name, b65_name);
+
+      strlower(eleven_name);
+
+      if (strlen(b65_name) > 0)
+        b65_name[strlen(b65_name)-1] = '\0';
+
+      // check if b65 var exists already in map
+      for (int k = 0; k < cntMapB65to11; k++)
+      {
+        // if so, modify existing entry
+        if (strcmp(mapb65to11[k].b65, b65_name) == 0)
+        {
+          strcpy(mapb65to11[k].eleven, eleven_name);
+          return;
+        }
+      }
+
+      // not found, so add it to end
+      strcpy(mapb65to11[cntMapB65to11].b65, b65_name);
+      strcpy(mapb65to11[cntMapB65to11].eleven, eleven_name);
+      cntMapB65to11++;
+    }
+  }
+}
+
 void cmdBasicList(void)
 {
   char line[512] = { 0 };
@@ -3112,6 +3155,8 @@ void cmdBasicList(void)
       searchfound = true;
     else if (strstr(line, searchstr) != 0)
       searchfound = true;
+
+    check_for_eleven_var_names(rem_flag, line);
 
     if (inrange && searchfound)
     {
@@ -5788,13 +5833,29 @@ void read_scalar_var_mem(void)
   }
 }
 
+void swap_eleven_name_to_b65(char** token)
+{
+  for (int k = 0; k < cntMapB65to11; k++)
+  {
+    if (strcmp(mapb65to11[k].eleven, *token) == 0)
+    {
+      *token = mapb65to11[k].b65;
+      break;
+    }
+  }
+}
+
 void print_basic_var(char* token)
 {
+  swap_eleven_name_to_b65(&token);
+
+  if (token)
+    strupper(token);
+
   read_scalar_var_mem();
   scan_single_letter_vars(token);
   scan_two_letter_vars(token);
   scan_arrays(token);
-  // todo: scan for arrays too
 }
 
 void print_dump(type_watch_entry* watch)
@@ -5838,8 +5899,6 @@ void cmdPrintString(void)
 void cmdPrintBasicVar(void)
 {
   char* token = strtok(NULL, " ");
-  if (token)
-    strupper(token);
   print_basic_var(token);
 }
 
