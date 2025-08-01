@@ -5584,7 +5584,7 @@ void show_array_name(char *token, char *name, char type, int dimensions, int* di
 
 void scan_arrays(char *token)
 {
-  char name[5];
+  char name[8];
   if (token == NULL)
   {
     printf("array vars:\n");
