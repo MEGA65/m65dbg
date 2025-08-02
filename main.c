@@ -296,6 +296,11 @@ int main(int argc, char** argv)
   signal(SIGINT, ctrlc_handler);
   rl_initialize();
 
+  if(getenv("M65DBG_DEV") != NULL) {
+     strcpy(devSerial, getenv("M65DBG_DEV")); 
+  }
+
+
   printf("m65dbg - " VERSION "\n");
   printf("======\n");
 
