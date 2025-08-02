@@ -146,6 +146,7 @@ typedef struct
   void (*func)(void);
   char* params;
   char* help;
+  char** category;
 } type_command_details;
 
 typedef struct tse
@@ -175,7 +176,6 @@ typedef struct {
   char eleven[64];
   char b65[4];
 } TYP_MAP_ENTRY_11_TO_B65;
-
 
 typedef enum { TYPE_BYTE, TYPE_WORD, TYPE_DWORD, TYPE_QWORD, TYPE_STRING, TYPE_DUMP,
     TYPE_MBYTE, TYPE_MWORD, TYPE_MDWORD, TYPE_MQWORD, TYPE_MSTRING, TYPE_MDUMP, TYPE_MFLOAT } type_watch;
