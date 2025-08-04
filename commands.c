@@ -2914,7 +2914,7 @@ char mapEscTok[256][12] =
 };
 
 
-TYP_MAP_ENTRY_11_TO_B65 mapb65to11[100];
+TYP_MAP_ENTRY_11_TO_B65 mapb65to11[300];
 
 int cntMapB65to11 = 0;
 
