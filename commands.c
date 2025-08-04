@@ -2717,6 +2717,8 @@ void check_if_setting_field(int addr, int chars_per_row, int clr_base, char *str
   }
 
   s = end + 1;
+  while (*s == ' ')
+    s++;
 
   int value = get_sym_value(s);
 
