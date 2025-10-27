@@ -4128,6 +4128,27 @@ int zpos = 0;
 int zval[PCCNT];
 int zflag = 0;
 
+char *zflag_reset_cmds[] = {
+  "t0",
+  "c",
+  "n",
+  "next",
+  "!",
+  "s",
+  "sc",
+  NULL
+};
+
+void check_if_reset_zflag(char *token)
+{
+  for (char **cmd = zflag_reset_cmds; *cmd != NULL; cmd++) {
+    if (strcmp(token, *cmd) == 0) {
+      zflag = 0;
+      zpos = 0;
+    }
+  }
+}
+
 void getz(void)
 {
   serialWrite("z\n");
@@ -4258,6 +4279,9 @@ void cmdForwardDis(void)
   sprintf(s, "dis %04X", zval[zpos]);
   strtok(s, " ");
 
+  if (autocls)
+    cmdClearScreen();
+
   disassemble(false);
 }
 
@@ -4280,6 +4304,9 @@ void cmdBackwardDis(void)
 
   sprintf(s, "dis %04X", zval[zpos]);
   strtok(s, " ");
+
+  if (autocls)
+    cmdClearScreen();
 
   disassemble(false);
 }

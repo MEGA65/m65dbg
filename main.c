@@ -71,6 +71,8 @@ void parse_command(void)
   // tokenise command
   token = strtok(strInput, " [");
 
+  check_if_reset_zflag(token);
+
   // test for special commands provided by the m65dbg app
   if (!handled)
   {

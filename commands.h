@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+void check_if_reset_zflag(char* token);
 void listSearch(void);
 void cmdRawHelp(void);
 void cmdHelp(void);
