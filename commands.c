@@ -1443,8 +1443,9 @@ void load_list(char* fname)
       char file[1024];
       int lineno;
       strcpy(file, &strtok(s, ":")[1]);
-      if (strrchr(line, '/'))
-        strcpy(file, strrchr(file, '/') + 1);
+      char* slashpos = strrchr(file, '/');
+      if (slashpos)
+        memmove(file, slashpos + 1, strlen(slashpos + 1) + 1);
       sscanf(strtok(NULL, ":"), "%d", &lineno);
       sscanf(line, " %X", &addr);
 
