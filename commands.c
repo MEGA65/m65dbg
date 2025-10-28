@@ -3799,6 +3799,7 @@ void cmdHelp(void)
           } 
           printf("===================\n"
                  "Commands for :%s\n", *category);
+          printf("===================\n");
           for (type_command_details *cd = command_details; cd->name != NULL; cd++) {
             for (char **cdCats = cd->category; *cdCats != NULL; cdCats++) {
               if (strcmp(*cdCats, *category) == 0) {
