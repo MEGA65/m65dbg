@@ -7064,6 +7064,8 @@ void cmdBasicBackTrace(void)
 
   // mdump(tos, 0x40);
 
+  stop_cpu_if_running();
+
   int cmd = mpeek(tos);
   while (cmd == 0x8d /* GOSUB */
       || cmd == 0xeb /* DO */
