@@ -343,7 +343,8 @@ type_command_details command_details[] =
   { "finish", cmdFinish, NULL, "Continue running until function returns (ie, step-out-from)", (char*[]){"step", NULL} },
   { "break", cmdSetBreakpoint, "<addr>", "Sets the hardware breakpoint to the desired address", (char*[]){"step", NULL } },
   { "sbreak", cmdSetSoftwareBreakpoint, "<addr>", "Sets the software breakpoint to the desired address", (char*[]){"step", NULL } },
-  { "back", cmdBackTrace, NULL, "produces a rough backtrace from the current contents of the stack", (char*[]){"step", NULL } },
+  { "back", cmdBackTrace, NULL, "produces a rough backtrace from the current contents of the CPU stack", (char*[]){"step", NULL } },
+  { "bback", cmdBasicBackTrace, NULL, "produces a BASIC backtrace from the current contents of the BASIC stack", (char*[]){"step", NULL } },
   { "up", cmdUpFrame, NULL, "The 'dis' disassembly command will disassemble one stack-level up from the current frame", (char*[]){"step", NULL } },
   { "down", cmdDownFrame, NULL, "The 'dis' disassembly command will disassemble one stack-level down from the current frame", (char*[]){"step", NULL } },
   { "-", cmdBackwardDis, "[<count>]", "move backward in disassembly of pc history from 'z' command", (char*[]){"step, NULL" } },
@@ -2379,6 +2380,12 @@ int peek(unsigned int address)
   return mem.b[0];
 }
 
+int peekw(unsigned int address)
+{
+  mem_data mem = get_mem(address, false);
+  return mem.b[0] + (mem.b[1] << 8);
+}
+
 int mpeek(unsigned int address)
 {
   mem_data mem = get_mem(address, true);
@@ -3071,6 +3078,9 @@ void cmdBasicList(void)
     orig_ptr = ptr;
     int nextptr = get_mm_word(ptr);
     if (nextptr == 0x0000)
+      break;
+
+    if (ctrlcflag)
       break;
 
     ptr += 2;
@@ -7044,6 +7054,44 @@ void cmdLoad(void)
   else
   {
     printf("Error opening the file '%s'!\n", strBinFile);
+  }
+}
+
+void cmdBasicBackTrace(void)
+{
+  int frameidx = 0;
+  int tos = mpeekw(0x7c); // get TOS ptr (top of BASIC stack)
+
+  // mdump(tos, 0x40);
+
+  int cmd = mpeek(tos);
+  while (cmd == 0x8d /* GOSUB */
+      || cmd == 0xeb /* DO */
+      || cmd == 0x81 /* FOR */
+      )
+  {
+    tos++;
+    int linenum = mpeekw(tos);
+    tos += 2;
+
+    printf("FRAME #%d: ", frameidx);
+    frameidx++;
+
+    char s[32];
+    sprintf(s, "pbas %d", linenum);
+    strtok(s, " ");
+
+    cmdBasicList();
+
+    if (ctrlcflag)
+      break;
+
+    tos += 2;
+
+    if (cmd == 0x81 /* FOR */)
+      tos += 15;  // 18 (lenfor - lengos = 18 - 5)
+
+    cmd = mpeek(tos);
   }
 }
 

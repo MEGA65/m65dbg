@@ -62,6 +62,7 @@ void cmdMPoke(void);
 void cmdMPokeW(void);
 void cmdMPokeD(void);
 void cmdMPokeQ(void);
+void cmdBasicBackTrace(void);
 void cmdBackTrace(void);
 void cmdUpFrame(void);
 void cmdDownFrame(void);
