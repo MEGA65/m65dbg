@@ -395,7 +395,7 @@ type_command_details command_details[] =
   { "autowatch", cmdAutoWatch, "0/1", "If set to 1, shows all watches prior to every step/next/dis command", (char*[]){"watch", NULL } },
 
   /** Misc */ 
-  { "blist", cmdBasicList, "[/d] [start] [end]", "list the current basic program (add /d for optional debug output, or optional start/end line number range)", (char*[]){"misc", NULL } },
+  { "blist", cmdBasicList, "[/d] [/64] [start] [end]", "list the current basic program (add /d for optional debug output, or optional start/end line number range. /64 for c64 basic location)", (char*[]){"misc", NULL } },
   { "cls", cmdClearScreen, NULL, "Clears the screen", (char*[]){"misc", NULL } },
   { "autocls", cmdAutoClearScreen, "0/1", "If set to 1, clears the screen prior to every step/next command", (char*[]){"config", NULL } },
   { "symbol", cmdSymbolValue, "<symbol|$hex>", "retrieves the value of the symbol from the .map file. Alternatively, can find symbol name/s matching given $hex address. If two $hex values are given, it finds all symbols within this range", (char*[]){"misc", NULL } },
@@ -3005,6 +3005,7 @@ void cmdBasicList(void)
   char s[50];
   mmem = NULL;
   bool dataflag = false;
+  bool c64flag = false;
   int start = -1;
   int end = -1;
   char* df;
@@ -3016,6 +3017,10 @@ void cmdBasicList(void)
     if (strcmp(df, "/d") == 0)
     {
       dataflag = true;
+    }
+    else if (strcmp(df, "/64") == 0)
+    {
+      c64flag = true;
     }
     else if (df[0] == '"')
     {
@@ -3069,7 +3074,7 @@ void cmdBasicList(void)
     }
   }
 
-  int ptr = 0x2001;
+  int ptr = c64flag ? 0x0801 : 0x2001;
   int orig_ptr;
   bool quote_flag = false;
 
