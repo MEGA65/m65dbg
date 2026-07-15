@@ -405,7 +405,18 @@ int main(int argc, char** argv)
     {
       printf("--help/-h = display this help\n"
              "--device/-l </dev/tty*> = select a tty device-name to use as the serial port to communicate with the Nexys hardware\n"
-             "-b <bistream.bit> = Name of bitstream file to load (needed for ftp support)\n");
+             "-b <bistream.bit> = Name of bitstream file to load (needed for ftp support)\n"
+             "\n"
+             "sub-commands:\n"
+             "------------\n"
+             "  dis <prg/raw name> [--raw] [--prg] [-a xxxx]\n"
+             "      - <prg/raw name> is the file you want disassembled\n"
+             "      - [--raw] is optional arg to enforce raw disassembly (treat first 2 bytes as part of assembly)\n"
+             "      - [--prg] is optional arg to enforce prg disassembly (treat first 2 bytes as starting address\n"
+             "      - If neither '--raw' or '--prg' are specified, it will be assumed via the file's extension (.prg or otherwise)\n"
+             "      - [-a xxxx] override starting address (xxxx = hex address)\n"
+             );
+
       exit(0);
     }
     if (strcmp(argv[k], "--device") == 0 ||

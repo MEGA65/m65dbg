@@ -209,6 +209,8 @@ typedef struct
     FILE* f;
 } dis_opts_t;
 
+int perform_file_disassembly(dis_opts_t *opts);
+
 extern type_command_details command_details[];
 extern type_symmap_entry* lstSymMap;
 extern type_watch_entry* lstWatches;
