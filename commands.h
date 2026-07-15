@@ -194,6 +194,22 @@ typedef struct we
   struct we* next;
 } type_watch_entry;
 
+typedef struct
+{
+    const char *filename;
+
+    bool raw;
+
+    bool prg;
+
+    bool addr_override;
+
+    uint16_t load_address;
+
+    FILE* f;
+} dis_opts_t;
+
 extern type_command_details command_details[];
 extern type_symmap_entry* lstSymMap;
 extern type_watch_entry* lstWatches;
+

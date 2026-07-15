@@ -284,6 +284,88 @@ void run_m65dbg_init_file_commands()
   load_init_file(".m65dbg_init");
 }
 
+bool default_is_prg(const char *filename)
+{
+    const char *dot = strrchr(filename,'.');
+
+    if(!dot)
+        return false;
+
+    return !strcasecmp(dot,".prg");
+}
+
+int disassemble_file(int argc, char **argv)
+{
+    dis_opts_t opts;
+
+    memset(&opts,0,sizeof(opts));
+
+    if(argc < 3)
+    {
+        printf("Usage:\n");
+        printf("    m65dbg dis file.prg\n");
+        printf("    m65dbg dis file.bin --raw -a c000\n");
+        return -1;
+    }
+
+    opts.filename = argv[2];
+
+    opts.prg = default_is_prg(opts.filename);
+    opts.raw = !opts.prg;
+
+    //
+    // Default behaviour based on extension
+    //
+
+    const char *dot = strrchr(opts.filename,'.');
+
+    if(dot && !strcasecmp(dot,".prg"))
+        opts.prg = true;
+    else
+        opts.raw = true;
+
+    //
+    // Parse remaining args
+    //
+
+    for(int i=3;i<argc;i++)
+    {
+        if(!strcmp(argv[i],"--raw"))
+        {
+            opts.raw = true;
+            opts.prg = false;
+            continue;
+        }
+
+        if(!strcmp(argv[i],"--prg"))
+        {
+            opts.prg = true;
+            opts.raw = false;
+            continue;
+        }
+
+        if(!strcmp(argv[i],"-a"))
+        {
+            if(i+1 >= argc)
+            {
+                printf("-a requires address\n");
+                return -1;
+            }
+
+            opts.addr_override = true;
+            opts.load_address = strtol(argv[++i],NULL,16);
+
+            continue;
+        }
+
+        printf("Unknown option: %s\n",argv[i]);
+        return -1;
+    }
+
+    return perform_file_disassembly(&opts);
+}
+
+
 const char *dbg_word_break_chars = " \t\n\"\\'`@$><=;|&{(*.";  // adding the '*' and '.' onto basic word break chars
 const char *history_file = ".history.txt";
 
@@ -308,6 +390,12 @@ int main(int argc, char** argv)
 
   printf("m65dbg - " VERSION "\n");
   printf("======\n");
+
+  // check for standalone disassemble command
+  if (argc > 1 && !strcmp(argv[1], "dis"))
+  {
+    return disassemble_file(argc, argv);
+  }
 
   // check parameters
   for (int k = 1; k < argc; k++)
@@ -378,3 +466,5 @@ int main(int argc, char** argv)
     parse_command();
   }
 }
+
+

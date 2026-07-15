@@ -39,6 +39,15 @@ void print_char(int c);
 int parseBinaryString(char* str);
 unsigned char* get_palette(void);
 
+typedef struct
+{
+    uint8_t *buffer;
+    size_t filesize;
+    uint16_t baseaddress; // based on raw/prg/overrides
+    uint16_t prgoffs;
+} dis_context_t;
+
+static dis_context_t* ctx = NULL;
 
 typedef struct
 {
@@ -2358,6 +2367,23 @@ void show_regs(reg_data* reg)
   printf("\n");
 }
 
+
+mem_data get_file_mem(int addr)
+{
+  mem_data mem = { 0 };
+  mem.addr = addr;
+
+  for (int k = 0; k < 16; k++)
+  {
+    if ( (addr + k - ctx->baseaddress + ctx->prgoffs) < ctx->filesize)
+      mem.b[k] = ctx->buffer[addr + k - ctx->baseaddress + ctx->prgoffs];
+    else
+      mem.b[k] = 0;
+  }
+  return mem;
+}
+
+
 mem_data get_mem(int addr, bool useAddr28)
 {
   mem_data mem = { 0 };
@@ -4001,7 +4027,11 @@ int disassemble_addr_into_string(char* str, int addr, bool useAddr28)
   char s[32] = { 0 };
 
   // get memory at current pc
-  mem_data mem = get_mem(addr, useAddr28);
+  mem_data mem;
+  if (ctx)
+    mem = get_file_mem(addr);
+  else
+    mem = get_mem(addr, useAddr28);
 
   // now, try to disassemble it
 
@@ -7340,4 +7370,98 @@ int cmdGetCmdCount(void)
 char* cmdGetCmdName(int idx)
 {
   return command_details[idx].name;
+}
+
+bool load_file_for_disassembly(dis_opts_t *opts)
+{
+  FILE *f = fopen(opts->filename, "rb");
+
+  if (!f) {
+    perror(opts->filename);
+    return false;
+  }
+
+  fseek(f, 0, SEEK_END);
+
+  ctx->filesize = ftell(f);
+
+  rewind(f);
+
+  ctx->buffer = malloc(ctx->filesize);
+
+  size_t bytes_read = fread(ctx->buffer, 1, ctx->filesize, f);
+
+  if (bytes_read != ctx->filesize) {
+      fprintf(stderr, "Short read.\n");
+      free(ctx->buffer);
+      ctx->buffer = NULL;
+      fclose(f);
+      return false;
+  }
+
+  fclose(f);
+
+  return true;
+}
+
+
+void print_summary(dis_opts_t *opts)
+{
+  printf("File          : %s\n", opts->filename);
+  printf("Format        : %s\n", opts->raw ? "RAW" : "PRG");
+  if (opts->addr_override)
+    printf("Load address  : $%04X (override)\n", opts->load_address);
+  else if (opts->prg)
+    printf("Load address  : $%04X (prg - first two bytes of file)\n", ctx->buffer[0] + (ctx->buffer[1] << 8));
+  else
+    printf("Load address  : $0000 (raw - unknown)\n");
+  printf("\n");
+}
+
+
+void disassemble_from_file(dis_opts_t *opts)
+{
+  char str[128] = { 0 };
+  int addr = opts->load_address;
+  int idx = 0;
+  int last_bytecount;
+
+  if (opts->prg)
+  {
+    ctx->baseaddress = ctx->buffer[0] + (ctx->buffer[1] << 8);
+    addr = ctx->baseaddress;
+    ctx->prgoffs = 2;
+  }
+
+  if (opts->addr_override)
+  {
+    addr = opts->load_address;
+    ctx->baseaddress = addr;
+  }
+
+  while (idx < ctx->filesize)
+  {
+    last_bytecount = disassemble_addr_into_string(str, addr, false);
+    printf("%s\n", str);
+    addr += last_bytecount;
+    idx += last_bytecount;
+  }
+}
+
+int perform_file_disassembly(dis_opts_t *opts)
+{
+  ctx = (dis_context_t*)malloc(sizeof(dis_context_t));
+  memset(ctx, 0, sizeof(dis_context_t));
+  if (!load_file_for_disassembly(opts))
+    return -1;
+
+  print_summary(opts);
+
+  disassemble_from_file(opts);
+
+  free(ctx->buffer);
+  free(ctx);
+  ctx = NULL;
+
+  return 0;
 }
