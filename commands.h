@@ -1,6 +1,7 @@
 /* vim: set expandtab shiftwidth=2 tabstop=2: */
 
 #include <stdbool.h>
+#include <stdint.h>
 
 void check_if_reset_zflag(char* token);
 void listSearch(void);
