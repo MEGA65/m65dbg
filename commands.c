@@ -1632,8 +1632,8 @@ void load_acme_list(char* fname)
       // NOTE: needed to comment this out while debugging lemans
       //       due to src/lemans.asm versus bin/lemans.rep locations
       //       (I had to make a sym-link to 'bin/src' to help)
-      //if (strrchr(asmname, '/'))
-      //  asmname = strrchr(asmname, '/') + 1;
+      if (strrchr(asmname, '/'))
+        asmname = strrchr(asmname, '/') + 1;
       sscanf(asmname, "%s", curfile);
     }
     else
