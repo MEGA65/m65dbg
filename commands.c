@@ -426,7 +426,8 @@ type_command_details command_details[] =
   { "autolocals", cmdAutoLocals, "0/1", "If set to 1, shows all locals prior to every step/next/dis command", (char*[]){"misc", NULL } },
   { "sprite", cmdSprite, "<spridx>", "print out the bits of the sprite at the given index\n"
 "                 (based on currently selected vicii bank at $dd00)\n"
-"                 If the index is in the form $xxxx, it is treated as an absolute memory address.", (char*[]){"misc", NULL } },
+"                 If the index is in the form $xxxx, it is treated as an absolute memory address."
+"                 If the index is in the form #0-7, it is treated as sprite number.", (char*[]){"misc", NULL } },
   { "char", cmdChar, "<charidx> [<count>]", "print out the bits of the char at the given index\n"
 "                 (based on currently selected vicii bank at $dd00)\n"
 "                 If the index is in the form $xxxx, it is treated as an absolute memory address.", (char*[]){"misc", NULL } },
@@ -1628,8 +1629,11 @@ void load_acme_list(char* fname)
     if (starts_with(line, "; ****") && strstr(line, "Source:"))
     {
       char* asmname = strstr(line, "Source: ") + strlen("Source: ");
-      if (strrchr(asmname, '/'))
-        asmname = strrchr(asmname, '/') + 1;
+      // NOTE: needed to comment this out while debugging lemans
+      //       due to src/lemans.asm versus bin/lemans.rep locations
+      //       (I had to make a sym-link to 'bin/src' to help)
+      //if (strrchr(asmname, '/'))
+      //  asmname = strrchr(asmname, '/') + 1;
       sscanf(asmname, "%s", curfile);
     }
     else
@@ -3223,6 +3227,18 @@ void cmdBasicList(void)
 
 void cmdSprite(void)
 {
+  bool is_abs = false;
+  bool is_spr16 = false;
+  bool is_sprptr16 = false;
+  bool is_sprhgten = false;
+  bool is_num = false;
+  bool is_ext_width = false;
+  int is_sprbpmen = 0;
+  int sprnum = 0;
+  int bitwidth = 24;
+  int pxlwidth = 24;
+  int pxlheight = 21;
+
   char* strSprIdx = strtok(NULL, " ");
 
   if (strSprIdx == NULL)
@@ -3235,54 +3251,136 @@ void cmdSprite(void)
 
   // is it an absolute address?
   if (strSprIdx[0] == '$') {
+    is_abs = true;
     spridx = get_sym_value(strSprIdx+1);
+  }
+
+  int sprptr16 = mpeek(0xffd306e) & 0x80 ? 1 : 0;
+  int sprptradr = mpeekw(0xffd306c);
+  int sprptrbnk = mpeek(0xffd306e) & 0x7f;
+
+  if (strSprIdx[0] == '#') {  // sprite number specifier
+    is_num = true;
+    sprnum = get_sym_value(strSprIdx+1);
+    if (sprptr16 == 0) {
+      spridx = mpeek(0x7f8 + sprnum);
+    }
+    if (sprptr16 == 1) {
+      spridx = mpeekw((sprptrbnk << 16) + sprptradr + sprnum * 2);
+    }
   }
 
   int vic_16kb_bank = mpeek(0xffd3d00) & 0x03;
   int vic_addr = (3 - vic_16kb_bank) * 0x4000;
   int spr_addr = vic_addr + spridx * 64;
+  int spr16en = mpeek(0xffd306b); // 16-colour sprite enabled?
+  int sprhgten = mpeek(0xffd3055);  // sprite height enable
+  int sprhght = mpeek(0xffd3056); // sprite height
+  int sprx64en = mpeek(0xffd3057); // sprite extended width enabled (64-pixels wide)
 
   if (strSprIdx[0] == '$') {
     spr_addr = spridx;
   }
 
   // get memory at current pc
-  mem_data* multimem = get_mem28array(spr_addr);
   int idx_cnt = 0;
 
+  if (!is_abs)
+  {
+    printf("spridx = %d ($%04X)\n", spridx, spridx);
+
+    if (is_num)
+    {
+      printf("  sprdata @ $%04X\n", spridx * 64);
+      if (sprptr16) {
+        printf("16-bit sprite pointer mode on\n");
+        printf("  sprptr16 address = $%02X.%04X\n", sprptrbnk, sprptradr);
+        is_sprptr16 = true;
+      }
+      if (spr16en & (int)pow(2, sprnum)) {
+        printf("16-colour sprite ($D06B.%d=1)\n", sprnum);
+        is_spr16 = true;
+
+        // also assess if we're using bitplane mode for this sprite
+        int val = sprnum < 4 ? mpeek(0xffd3049) >> 4 : mpeek(0xffd304b) & 0xf0;
+        printf("-- val = %02X\n", val);
+        if (val & (int)pow(2, sprnum)) {
+          is_sprbpmen = 1;
+          printf("bitmap-mode sprite enabled\n");
+        }
+      }
+
+      if (sprx64en & (int)pow(2, sprnum)) {
+        printf("Extended-width (64-pixel) enable ($D057.%d=1)\n", sprnum);
+        is_ext_width = true;
+      }
+
+      if (sprhgten & (int)pow(2, sprnum)) {
+        printf("Extended-height enable ($D055.%d=1)\n", sprnum);
+        is_sprhgten = true;
+        printf("  height = %d ($D056)\n", sprhght);
+        pxlheight = sprhght;
+      }
+    }
+  }
   printf("vicii bank: $%04X - $%04X\n", vic_addr, vic_addr + 0x4000 - 1);
   printf("sprite idx $%02X address: $%04X\n", spridx, spr_addr);
 
-  printf("+------------------------+\n|");
-    for (int line = 0; line < 16; line++)
-    {
-      mem_data* mem = &multimem[line];
+  if (is_ext_width) {
+    bitwidth = 64;
+    if (is_spr16)
+      pxlwidth = 16;
+    else
+      pxlwidth = 64;
+  }
 
-      for (int k = 0; k < 16; k++)
-      {
-        int val = mem->b[k];
+  unsigned char* palette = NULL;
+  if (is_spr16)
+    palette = get_palette();
 
-        for (int bitfield = 128; bitfield >= 1; bitfield /= 2) {
-          if ( (val & bitfield) != 0) {
-            printf("*");
-          } else {
-            printf(" ");
-          }
-        }
+  printf("+");
+  for (int k = 0; k < pxlwidth; k++)
+    printf("-");
+  printf("+\n|");
 
-        idx_cnt++;
-        if ( (idx_cnt % 3) == 0) {
-          printf("|\n");
-          if (idx_cnt != 63) {
-            printf("|");
-          }
-        }
-        if (idx_cnt == 63) {
-          printf("+------------------------+\n");
-          return;
+  int ptr = spr_addr;
+  int maxbyte = bitwidth/8 * pxlheight;
+  for (int k = 0; k < maxbyte; k++)
+  {
+    int val = get_mm_byte(ptr);
+    ptr++;
+
+    if (is_spr16) { // 16-colours per pixel sprite
+      // take a look at show_pixel_block() to see how to printf colour blocks
+      show_pixel_block(false, is_sprbpmen*0x80 + sprnum*0x10 + (val >> 4), palette);
+      show_pixel_block(false, is_sprbpmen*0x80 + sprnum*0x10 + (val & 0x0f), palette);
+    }
+    else { // standard one-bit-per-pixel sprite
+      for (int bitfield = 128; bitfield >= 1; bitfield /= 2) {
+        if ( (val & bitfield) != 0) {
+          printf("*");
+        } else {
+          printf(" ");
         }
       }
     }
+
+    if ( (k+1) % (bitwidth/8) == 0) {
+      printf(KNRM);
+      printf("|\n");
+      if (k != maxbyte-1) {
+        printf("|");
+      }
+      else {
+        printf("+");
+        for (int k = 0; k < pxlwidth; k++)
+          printf("-");
+        printf("+\n|");
+        return;
+      }
+    }
+    
+  }
 }
 
 void cmdSet(void)
